@@ -13,6 +13,7 @@ PREP(getUnitType);
 
 PREP(addEventMission);
 PREP(addRecordingHooks);
+PREP(removeRecordingHooks);
 PREP(handleCustomEvent);
 PREP(handleMarkers);
 PREP(addUnitEventHandlers);

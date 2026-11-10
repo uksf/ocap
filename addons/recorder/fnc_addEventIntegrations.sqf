@@ -4,7 +4,7 @@
 
 {
   // log chat
-	addMissionEventHandler ["HandleChatMessage", {
+	private _chatId = addMissionEventHandler ["HandleChatMessage", {
 		params ["_channel", "_owner", "_from", "_text", "_person", "_name", "_strID", "_forcedDisplay", "_isPlayerMessage", "_sentenceType", "_chatMessageType"];
     if (!SHOULDSAVEEVENTS) exitWith {};
 
@@ -13,7 +13,8 @@
 		};
 		false;
 	}];
-} remoteExec ["call", 0, true];
+  TRACK_HOOK("mission",objNull,"HandleChatMessage",_chatId);
+} remoteExec ["call", 0, "ocap_hooks_chat"];
 
 // ACE death
 // https://github.com/acemod/ACE3/blob/c7e13ca4c7106ffb567b84b8590a472df4cab2f1/addons/medical_status/functions/fnc_setDead.sqf#L24-L27
@@ -23,7 +24,7 @@
   if (isClass (configFile >> "CfgPatches" >> "ace_medical_status")) then {
 
     // add event handlers
-    ["ace_medical_death", {
+    private _deathId = ["ace_medical_death", {
       if (!SHOULDSAVEEVENTS) exitWith {};
       _this params ["_unit"];
       _ownerId = _thisArgs;
@@ -48,13 +49,14 @@
         }
       ] remoteExec ["call", _ownerId];
     }, remoteExecutedOwner] call CBA_fnc_addEventHandlerArgs;
+    TRACK_HOOK("cba",objNull,"ace_medical_death",_deathId);
   };
-} remoteExec ["call", 0, true];
+} remoteExec ["call", 0, "ocap_hooks_aceDeath"];
 
 // ace unconsciousness is a global event
 // https://github.com/acemod/ACE3/blob/c7e13ca4c7106ffb567b84b8590a472df4cab2f1/addons/medical_status/functions/fnc_setUnconsciousState.sqf
 if (isClass (configFile >> "CfgPatches" >> "ace_medical_status")) then {
-  ["ace_unconscious", {
+  private _unconId = ["ace_unconscious", {
       if (!SHOULDSAVEEVENTS) exitWith {};
       _this params ["_unit", "_isUnconscious"];
 
@@ -69,6 +71,7 @@ if (isClass (configFile >> "CfgPatches" >> "ace_medical_status")) then {
         ]] call EFUNC(extension,sendData);
       };
   }] call CBA_fnc_addEventHandlerArgs;
+  TRACK_HOOK("cba",objNull,"ace_unconscious",_unconId);
 };
 
 
@@ -78,7 +81,7 @@ if (isClass (configFile >> "CfgPatches" >> "ace_medical_status")) then {
 
   // TFAR Beta support
   if (isClass (configFile >> "CfgPatches" >> "tfar_core")) then {
-    ["TFAR_event_OnTangent", {
+    private _TFAR_event_OnTangentId = ["TFAR_event_OnTangent", {
       _this params ["_TFAR_currentUnit", "_radio", "_radioType", "_additional", "_isStartTransmission"];
       _ownerId = _thisArgs;
 
@@ -156,12 +159,13 @@ if (isClass (configFile >> "CfgPatches" >> "ace_medical_status")) then {
           ]
       ] remoteExec [QFUNC(radioEvent), _ownerId];
     }, remoteExecutedOwner] call CBA_fnc_addEventHandlerArgs;
+    TRACK_HOOK("cba",objNull,"TFAR_event_OnTangent",_TFAR_event_OnTangentId);
   };
 
 
   // ACRE2 support
   if (isClass (configFile >> "CfgPatches" >> "acre_main")) then {
-    ["acre_startedSpeaking", {
+    private _acre_startedSpeakingId = ["acre_startedSpeaking", {
       _this params ["_unit", "_onRadio", "_radioId", "_speakingType"];
       if (!_onRadio) exitWith {};
       if (!SHOULDSAVEEVENTS) exitWith {};
@@ -195,8 +199,9 @@ if (isClass (configFile >> "CfgPatches" >> "ace_medical_status")) then {
         ]
       ] remoteExec [QFUNC(radioEvent), _ownerId];
     }, remoteExecutedOwner] call CBA_fnc_addEventHandlerArgs;
+    TRACK_HOOK("cba",objNull,"acre_startedSpeaking",_acre_startedSpeakingId);
 
-    ["acre_stoppedSpeaking", {
+    private _acre_stoppedSpeakingId = ["acre_stoppedSpeaking", {
       _this params ["_unit", "_onRadio"];
       if (!_onRadio) exitWith {};
       if (!SHOULDSAVEEVENTS) exitWith {};
@@ -222,7 +227,8 @@ if (isClass (configFile >> "CfgPatches" >> "ace_medical_status")) then {
         ]
       ] remoteExec [QFUNC(radioEvent), _ownerId];
     }, remoteExecutedOwner] call CBA_fnc_addEventHandlerArgs;
+    TRACK_HOOK("cba",objNull,"acre_stoppedSpeaking",_acre_stoppedSpeakingId);
   };
 
   missionNamespace setVariable [QGVARMAIN(radioEventsInitialized), true];
-} remoteExec ["call", [0, -2] select isDedicated, true];
+} remoteExec ["call", [0, -2] select isDedicated, "ocap_hooks_radio"];

@@ -81,6 +81,15 @@ if (GVAR(captureFrameNo) == 0) then {
   } else {
     call FUNC(captureLoop);
   };
+} else {
+  if (isNil QGVAR(PFHObject)) then {
+    [true] call FUNC(captureLoop);
+  };
+};
+
+if (isNil QGVAR(missionStartLogged)) then {
+  GVAR(missionStartLogged) = true;
+  [QGVARMAIN(customEvent), ["generalEvent", "Mission has started!"]] call CBA_fnc_serverEvent;
 };
 
 [QGVARMAIN(customEvent), ["generalEvent", "Recording started."]] call CBA_fnc_serverEvent;

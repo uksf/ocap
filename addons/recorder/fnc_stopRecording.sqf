@@ -54,3 +54,5 @@ _missionDateFormat append (date apply {if (_x < 10) then {"0" + str _x} else {st
 
 GVAR(recording) = false;
 publicVariable QGVAR(recording);
+
+call FUNC(removeRecordingHooks);

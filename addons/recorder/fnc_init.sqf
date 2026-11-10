@@ -219,7 +219,6 @@ if (GVAR(autoStart)) then {
     {(getClientStateNumber > 9 && (count allPlayers) >= EGVAR(settings,minPlayerCount) && GVAR(autoStart)) || !isNil QGVAR(startTime)},
     {
       call FUNC(startRecording);
-      [QGVARMAIN(customEvent), ["generalEvent", "Mission has started!"]] call CBA_fnc_serverEvent;
     }
   ] call CBA_fnc_waitUntilAndExecute;
 };

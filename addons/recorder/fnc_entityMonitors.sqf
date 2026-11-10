@@ -31,7 +31,8 @@ Author:
   [] spawn {
     waitUntil {!isNull (findDisplay 12)};
     disableSerialization;
-    (findDisplay 12 displayCtrl 51) ctrlAddEventHandler ["Draw", {
+    private _map = findDisplay 12 displayCtrl 51;
+    private _drawId = _map ctrlAddEventHandler ["Draw", {
       if (GVARMAIN(isDebug)) then {
         _sizeInMeters = 2.5;
         _iconSize = (_sizeInMeters * 0.15) * 10^(abs log (ctrlMapScale (_this#0)));
@@ -64,8 +65,9 @@ Author:
         });
       };
     }];
+    TRACK_HOOK("ctrl",_map,"Draw",_drawId);
   };
-} remoteExec ["call", [0, -2] select isDedicated, true];
+} remoteExec ["call", [0, -2] select isDedicated, "ocap_hooks_monitors"];
 
 // Variable: OCAP_entityMonitorsInitialized
 // This variable on the server indicates whether or not the entity monitors have been initialized for all clients + JIP.

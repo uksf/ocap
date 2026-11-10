@@ -4,7 +4,7 @@ FILE: fnc_addRecordingHooks.sqf
 FUNCTION: OCAP_recorder_fnc_addRecordingHooks
 
 Description:
-  Installs every recording-only handler, loop, and client hook the first time recording starts. Until then, OCAP adds no per-frame, per-unit, per-marker, or per-shot work on the server, headless clients, or players. Runs once per mission. Called by <OCAP_recorder_fnc_startRecording>.
+  Installs every recording-only handler, loop, and client hook the first time recording starts. Until then, OCAP adds no per-frame, per-unit, per-marker, or per-shot work on the server, headless clients, or players. Runs again after <OCAP_recorder_fnc_removeRecordingHooks> when recording resumes. Called by <OCAP_recorder_fnc_startRecording>.
 
 Parameters:
   None
@@ -32,6 +32,7 @@ if (isNil QEGVAR(EH,EntityKilled)) then {
   EGVAR(EH,EntityKilled) = addMissionEventHandler ["EntityKilled", {
     _this call FUNC(eh_killed);
   }];
+  TRACK_HOOK("mission",objNull,"EntityKilled",EGVAR(EH,EntityKilled));
   OCAPEXTLOG(["Initialized EntityKilled EH"]);
 };
 
@@ -59,6 +60,7 @@ if (isNil QEGVAR(EH,EntityRespawned)) then {
       [_entity, true] spawn FUNC(addUnitEventHandlers);
     };
   }];
+  TRACK_HOOK("mission",objNull,"EntityRespawned",EGVAR(EH,EntityRespawned));
   OCAPEXTLOG(["Initialized EntityRespawned EH"]);
 };
 
@@ -77,6 +79,7 @@ if (isClass (configFile >> "CfgPatches" >> "ace_advanced_throwing")) then {
     EGVAR(listener,aceThrowing) = ["ace_advanced_throwing_throwFiredXEH", {
       _this call FUNC(eh_firedMan)
     }] call CBA_fnc_addEventHandler;
+    TRACK_HOOK("cba",objNull,"ace_advanced_throwing_throwFiredXEH",EGVAR(listener,aceThrowing));
     OCAPEXTLOG(["Initialized ACE Throwing listener"]);
   };
 };
@@ -90,6 +93,7 @@ if (isClass (configFile >> "CfgPatches" >> "ace_explosives")) then {
     EGVAR(listener,aceExplosives) = ["ace_explosives_place", {
       call FUNC(aceExplosives);
     }] call CBA_fnc_addEventHandler;
+    TRACK_HOOK("cba",objNull,"ace_explosives_place",EGVAR(listener,aceExplosives));
     OCAPEXTLOG(["Initialized ACE Explosives listener"]);
   };
 };

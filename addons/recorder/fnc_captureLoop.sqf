@@ -28,7 +28,7 @@ Author:
 ---------------------------------------------------------------------------- */
 
 #include "script_component.hpp"
-
+params [["_resume", false, [false]]];
 if (!isNil QGVAR(PFHObject)) then {
   [GVAR(PFHObject)] call CBA_fnc_deletePerFrameHandlerObject;
   GVAR(PFHObject) = nil;
@@ -40,8 +40,7 @@ if (isNil QGVAR(startTime)) then {
   LOG(ARR3(__FILE__,QGVAR(recording) + " started, time:",GVAR(startTime)));
 };
 
-GVAR(trackedVehicles) = createHashMap;
-GVAR(trackedUnits) = createHashMap;
+if (!_resume) then {GVAR(trackedVehicles) = createHashMap; GVAR(trackedUnits) = createHashMap};
 
 // Pre-compute frame intervals that depend on frameCaptureDelay (constant for the mission)
 // Must be GVARs, not private — PFH code runs in a different scope.

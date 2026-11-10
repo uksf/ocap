@@ -38,8 +38,8 @@ Author:
 // VARIABLE: OCAP_recorder_trackedMarkers
 // Persistent global variable on server that defines unique marker names currently being tracked.
 // Entries are added at marker create events and removed at marker delete events to avoid duplicate processing.
-GVAR(trackedMarkers) = []; // Markers which we save into replay
-GVAR(trackedMarkerStates) = createHashMap;
+if (isNil QGVAR(trackedMarkers)) then {GVAR(trackedMarkers) = []}; // Markers which we save into replay
+if (isNil QGVAR(trackedMarkerStates)) then {GVAR(trackedMarkerStates) = createHashMap};
 
 // VARIABLE: OCAP_listener_markers
 // Contains handle for <OCAP_handleMarker> CBA event handler.
@@ -166,9 +166,7 @@ EGVAR(listener,markers) = [QGVARMAIN(handleMarker), {
     };
   };
 }] call CBA_fnc_addEventHandler;
-
-
-
+TRACK_HOOK("cba",objNull,QGVARMAIN(handleMarker),EGVAR(listener,markers));
 
 
 // handle created markers
@@ -188,7 +186,7 @@ EGVAR(listener,markers) = [QGVARMAIN(handleMarker), {
 
       If so, sends marker data to <OCAP_handleMarker> on the server for processing.
  */
-  addMissionEventHandler["MarkerCreated", {
+  private _createdId = addMissionEventHandler["MarkerCreated", {
     params["_marker", "_channelNumber", "_owner", "_local"];
 
     if (!_local) exitWith {};
@@ -239,7 +237,7 @@ EGVAR(listener,markers) = [QGVARMAIN(handleMarker), {
 
       If so, sends marker data to <OCAP_handleMarker> on the server for processing.
   */
-  addMissionEventHandler["MarkerUpdated", {
+  private _updatedId = addMissionEventHandler["MarkerUpdated", {
     params["_marker", "_local"];
 
     if (!_local) exitWith {};
@@ -288,7 +286,7 @@ EGVAR(listener,markers) = [QGVARMAIN(handleMarker), {
 
       If so, sends marker data to <OCAP_handleMarker> on the server for processing.
   */
-  addMissionEventHandler["MarkerDeleted", {
+  private _deletedId = addMissionEventHandler["MarkerDeleted", {
     params["_marker", "_local"];
 
     if (!_local) exitWith {};
@@ -308,7 +306,8 @@ EGVAR(listener,markers) = [QGVARMAIN(handleMarker), {
 
     [QGVARMAIN(handleMarker), ["DELETED", _marker, player]] call CBA_fnc_serverEvent;
   }];
-} remoteExec["call", 0, true];
+  TRACK_HOOK("mission",objNull,"MarkerCreated",_createdId); TRACK_HOOK("mission",objNull,"MarkerUpdated",_updatedId); TRACK_HOOK("mission",objNull,"MarkerDeleted",_deletedId);
+} remoteExec["call", 0, "ocap_hooks_markers"];
 
 
 

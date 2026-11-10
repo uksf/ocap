@@ -31,7 +31,7 @@ if (_this isEqualType [] && {count _this > 0}) exitWith {
   if (_sector getVariable [QGVAR(sectorTracked), false]) exitWith {};
   _sector setVariable [QGVAR(sectorTracked), true];
 
-  [_sector, "ownerChanged", {
+  private _sectorId = [_sector, "ownerChanged", {
     params ["_sector", "_newOwner", "_oldOwner"];
     if (!SHOULDSAVEEVENTS) exitWith {};
 
@@ -46,6 +46,7 @@ if (_this isEqualType [] && {count _this > 0}) exitWith {
       [QGVARMAIN(customEvent), ["captured", ["sector", _name, str _newOwner, _pos]]] call CBA_fnc_localEvent;
     };
   }] call BIS_fnc_addScriptedEventHandler;
+  TRACK_HOOK("scripted",_sector,"ownerChanged",_sectorId);
 };
 
 // --- Init mode: track all existing sectors + Zeus monitoring ---
@@ -59,10 +60,11 @@ INFO_1("Tracking %1 existing sector(s)",count _sectors);
 
 // Monitor Zeus-placed sectors
 {
-  _x addEventHandler ["CuratorObjectPlaced", {
+  private _curatorId = _x addEventHandler ["CuratorObjectPlaced", {
     params ["_curator", "_object"];
     if (!(_object isKindOf "ModuleSector_F")) exitWith {};
     [_object] call FUNC(trackSectors);
     INFO_1("Zeus-placed sector tracked: %1",_object);
   }];
+  TRACK_HOOK("object",_x,"CuratorObjectPlaced",_curatorId);
 } forEach allCurators;

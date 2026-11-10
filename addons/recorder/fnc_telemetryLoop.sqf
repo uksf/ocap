@@ -23,7 +23,7 @@ Author:
   OCAP Team
 ---------------------------------------------------------------------------- */
 
-[{
+private _telemetryPFH = [{
   if !(SHOULDSAVEEVENTS) exitWith {};
   [] spawn {
     private _start = diag_tickTime;
@@ -170,3 +170,4 @@ Author:
     };
   };
 }, 10] call CBA_fnc_addPerFrameHandler;
+TRACK_HOOK("pfh",objNull,"",_telemetryPFH);

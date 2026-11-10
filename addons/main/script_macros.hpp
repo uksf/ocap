@@ -31,6 +31,11 @@
 // Used to determine if events should currently be saved based on <OCAP_recorder_recording> and <OCAP_recorder_startTime>.
 #define SHOULDSAVEEVENTS ((missionNamespace getVariable [QEGVAR(recorder,recording), false]) && missionNamespace getVariable [QEGVAR(recorder,startTime), -1] > -1)
 
+// MACRO: TRACK_HOOK
+// Records a recording-only hook on the local machine so <OCAP_recorder_fnc_removeRecordingHooks> can remove it when recording stops.
+// KIND is one of "mission", "cba", "pfh", "object", "scripted", "ctrl". Arguments must not contain commas.
+#define TRACK_HOOK(KIND,TARGET,NAME,ID) if (isNil QGVARMAIN(hooks)) then {GVARMAIN(hooks) = []}; GVARMAIN(hooks) pushBack [KIND, TARGET, NAME, ID]
+
 // DEFINE: BOOL
 // Forces a true/false return of input.
 #define BOOL(_cond) ([0,1] select (_cond))

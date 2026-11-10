@@ -17,16 +17,16 @@
 // Send the compiled functions to all clients (JIP-queued for late joiners).
 [FUNC(eh_fired_client), {
   missionNamespace setVariable [QFUNC(eh_fired_client), _this];
-}] remoteExec ["call", -2, true];
+}] remoteExec ["call", -2, "ocap_fn_fired_1"];
 [FUNC(eh_fired_clientBullet), {
   missionNamespace setVariable [QFUNC(eh_fired_clientBullet), _this];
-}] remoteExec ["call", -2, true];
+}] remoteExec ["call", -2, "ocap_fn_fired_2"];
 [FUNC(eh_fired_clientProjectile), {
   missionNamespace setVariable [QFUNC(eh_fired_clientProjectile), _this];
-}] remoteExec ["call", -2, true];
+}] remoteExec ["call", -2, "ocap_fn_fired_3"];
 
-GVAR(trackedProjectiles) = createHashMap;
-GVAR(trackedPlacedObjects) = createHashMap;
+if (isNil QGVAR(trackedProjectiles)) then {GVAR(trackedProjectiles) = createHashMap};
+if (isNil QGVAR(trackedPlacedObjects)) then {GVAR(trackedPlacedObjects) = createHashMap};
 
 // Globally broadcast and initialize fired events for all units and future units. This avoids the need to track locality changes from server-to-client or client-to-client (e.g. group leader changes).
 // Note that handlers are added on each executing machine directly. The old remoteExec-to-owner path was removed because not-yet-networked entities (owner 0) deserialize as objNull.
@@ -73,7 +73,7 @@ GVAR(trackedPlacedObjects) = createHashMap;
 
   // Initialize on existing units first, then handle all subsequent units.
   {_x call _fnc_addHandlers} forEach allUnits;
-  addMissionEventHandler ["EntityCreated", {
+  private _createdId = addMissionEventHandler ["EntityCreated", {
     params ["_entity"];
     if !(_entity isKindOf "CAManBase") exitWith {};
     _thisArgs params ["_fnc_addHandlers"];
@@ -86,12 +86,13 @@ GVAR(trackedPlacedObjects) = createHashMap;
       _entity call _fnc_addHandlers;
     };
   }, [_fnc_addHandlers]];
+  TRACK_HOOK("mission",objNull,"EntityCreated",_createdId);
 
-} remoteExec ["call", 0, true];
+} remoteExec ["call", 0, "ocap_hooks_fired"];
 
 
 // Finally, we'll add a CBA Event Handler to take in the pre-processed fired data here on the server and send it to the extension.
-[QGVARMAIN(handleFiredManData), {
+GVAR(firedListener) = [QGVARMAIN(handleFiredManData), {
   params ["_data"];
   // Receive array from server, hc, or client.
   TRACE_1("Sending fired data to extension",_data);
@@ -100,10 +101,11 @@ GVAR(trackedPlacedObjects) = createHashMap;
     [":EVENT:PROJECTILE:", _this] call EFUNC(extension,sendData);
   };
 }] call CBA_fnc_addEventHandler;
+TRACK_HOOK("cba",objNull,QGVARMAIN(handleFiredManData),GVAR(firedListener));
 
 // Handle placed object creation events (mines, explosives)
 // ID assignment happens here because GVAR(nextId) only exists on the server
-[QGVARMAIN(handlePlacedData), {
+GVAR(firedListener) = [QGVARMAIN(handlePlacedData), {
   params ["_data", "_projectile"];
   private _placedId = GVAR(nextId);
   GVAR(nextId) = GVAR(nextId) + 1;
@@ -118,34 +120,38 @@ GVAR(trackedPlacedObjects) = createHashMap;
   // (Local EH is not supported on mine/explosive objects.)
   GVAR(trackedPlacedObjects) set [_placedId, _projectile];
 }] call CBA_fnc_addEventHandler;
+TRACK_HOOK("cba",objNull,QGVARMAIN(handlePlacedData),GVAR(firedListener));
 
 // Handle placed object lifecycle events (detonation, deletion)
-[QGVARMAIN(handlePlacedEvent), {
+GVAR(firedListener) = [QGVARMAIN(handlePlacedEvent), {
   params ["_data"];
   TRACE_1("Sending placed event data to extension",_data);
   [":PLACED:EVENT:", _data] call EFUNC(extension,sendData);
 }] call CBA_fnc_addEventHandler;
+TRACK_HOOK("cba",objNull,QGVARMAIN(handlePlacedEvent),GVAR(firedListener));
 
 // Handle non-bullet projectile lifecycle — server accumulates data from clients
 // and sends EVENT:PROJECTILE when the projectile is done.
 
 // Initial projectile data from client — store in hashmap
-[QGVARMAIN(handleProjectileInit), {
+GVAR(firedListener) = [QGVARMAIN(handleProjectileInit), {
   params ["_tempKey", "_data"];
   TRACE_2("Projectile init",_tempKey,_data select 17);
   GVAR(trackedProjectiles) set [_tempKey, [_data, diag_tickTime]];
 }] call CBA_fnc_addEventHandler;
+TRACK_HOOK("cba",objNull,QGVARMAIN(handleProjectileInit),GVAR(firedListener));
 
 // Position update from client — append to stored positions array
-[QGVARMAIN(handleProjectilePos), {
+GVAR(firedListener) = [QGVARMAIN(handleProjectilePos), {
   params ["_tempKey", "_pos"];
   private _entry = GVAR(trackedProjectiles) get _tempKey;
   if (isNil "_entry") exitWith {};
   ((_entry select 0) select 14) pushBack _pos;
 }] call CBA_fnc_addEventHandler;
+TRACK_HOOK("cba",objNull,QGVARMAIN(handleProjectilePos),GVAR(firedListener));
 
 // Hit event from client — append hit data and position
-[QGVARMAIN(handleProjectileHit), {
+GVAR(firedListener) = [QGVARMAIN(handleProjectileHit), {
   params ["_tempKey", "_hitData", "_pos"];
   private _entry = GVAR(trackedProjectiles) get _tempKey;
   if (isNil "_entry") exitWith {};
@@ -153,9 +159,10 @@ GVAR(trackedPlacedObjects) = createHashMap;
   (_data select 16) pushBack _hitData;
   (_data select 14) pushBack _pos;
 }] call CBA_fnc_addEventHandler;
+TRACK_HOOK("cba",objNull,QGVARMAIN(handleProjectileHit),GVAR(firedListener));
 
 // Projectile done signal — send accumulated data to extension and clean up
-[QGVARMAIN(handleProjectileDone), {
+GVAR(firedListener) = [QGVARMAIN(handleProjectileDone), {
   params ["_tempKey", ["_finalPos", []]];
   private _entry = GVAR(trackedProjectiles) getOrDefault [_tempKey, []];
   if (_entry isEqualTo []) exitWith {
@@ -169,10 +176,11 @@ GVAR(trackedPlacedObjects) = createHashMap;
   TRACE_1("Projectile done, sending to extension",_tempKey);
   [QGVARMAIN(handleFiredManData), [_data]] call CBA_fnc_localEvent;
 }] call CBA_fnc_addEventHandler;
+TRACK_HOOK("cba",objNull,QGVARMAIN(handleProjectileDone),GVAR(firedListener));
 
 // Timeout PFH — clean up orphaned projectiles every 30s
 // Covers edge cases where client crashes or PFH failsafe doesn't fire
-[{
+GVAR(firedPFH) = [{
   private _toRemove = [];
   private _now = diag_tickTime;
   {
@@ -185,11 +193,12 @@ GVAR(trackedPlacedObjects) = createHashMap;
   } forEach GVAR(trackedProjectiles);
   { GVAR(trackedProjectiles) deleteAt _x } forEach _toRemove;
 }, 30] call CBA_fnc_addPerFrameHandler;
+TRACK_HOOK("pfh",objNull,"",GVAR(firedPFH));
 
 // Placed object locality check — detect mines/explosives that transferred to
 // the server (e.g. placer disconnected) and re-add lifecycle EHs.
 // Local EH is not supported on mine objects, so we poll instead.
-[{
+GVAR(firedPFH) = [{
   private _toRemove = [];
   {
     private _obj = _y;
@@ -226,3 +235,4 @@ GVAR(trackedPlacedObjects) = createHashMap;
   } forEach GVAR(trackedPlacedObjects);
   { GVAR(trackedPlacedObjects) deleteAt _x } forEach _toRemove;
 }, 30] call CBA_fnc_addPerFrameHandler;
+TRACK_HOOK("pfh",objNull,"",GVAR(firedPFH));
