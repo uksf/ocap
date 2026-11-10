@@ -42,6 +42,8 @@ if (GVAR(recording) && GVAR(captureFrameNo) > 10) exitWith {
 GVAR(recording) = true;
 publicVariable QGVAR(recording);
 
+call FUNC(addRecordingHooks);
+
 private _systemTimeFormat = ["%1-%2-%3T%4:%5:%6.%7"];
 _systemTimeFormat append (systemTimeUTC apply {if (_x < 10) then {"0" + str _x} else {str _x}});
 private _missionDateFormat = ["%1-%2-%3T%4:%5:00"];

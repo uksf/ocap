@@ -118,11 +118,7 @@ publicVariable QGVAR(restrictMarkersCompat);
 // Add mission event handlers
 call FUNC(addEventMission);
 
-// Add integration event handlers (chat, ACE, TFAR)
-call FUNC(addEventIntegrations);
-call FUNC(eh_fired_server);
-call FUNC(telemetryLoop);
-[] spawn FUNC(getStaticObjects);
+// Recording-only handlers are installed by <OCAP_recorder_fnc_addRecordingHooks> when recording first starts.
 
 // Check already-connected players for admin controls (fixes race condition
 // where players connected before OCAP initialized don't get diary entries)
@@ -217,15 +213,13 @@ call EFUNC(extension,initSession);
   The startRecording function checks internally if recording has already started by other means via whether GVAR(startTime) has been declared or not.
   Start recording AFTER Briefing screen, so the beginning of the recording matches the start of the actual mission session.
 */
-[
-  {(getClientStateNumber > 9 && (count allPlayers) >= EGVAR(settings,minPlayerCount) && GVAR(autoStart)) || !isNil QGVAR(startTime)},
-  {
-    call FUNC(startRecording);
-    [QGVARMAIN(customEvent), ["generalEvent", "Mission has started!"]] call CBA_fnc_serverEvent;
-  }
-] call CBA_fnc_waitUntilAndExecute;
-
-
-if (isNil QGVAR(entityMonitorsInitialized)) then {
-  call FUNC(entityMonitors);
+// The waiter polls every frame, so it is only installed when auto-start is enabled.
+if (GVAR(autoStart)) then {
+  [
+    {(getClientStateNumber > 9 && (count allPlayers) >= EGVAR(settings,minPlayerCount) && GVAR(autoStart)) || !isNil QGVAR(startTime)},
+    {
+      call FUNC(startRecording);
+      [QGVARMAIN(customEvent), ["generalEvent", "Mission has started!"]] call CBA_fnc_serverEvent;
+    }
+  ] call CBA_fnc_waitUntilAndExecute;
 };
